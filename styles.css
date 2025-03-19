@@ -1,0 +1,182 @@
+/* General Page Styling */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    background-color: #f4f4f4;
+}
+
+/* Header */
+header {
+    background-color: #0078D7;
+    color: white;
+    padding: 20px;
+    font-size: 24px;
+}
+
+/* Control Panel */
+.control-panel {
+    margin: 20px auto;
+    padding: 20px;
+    background: white;
+    width: 90%;
+    max-width: 400px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Buttons */
+.controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.middle-controls {
+    display: flex;
+    justify-content: center;
+    gap: 20px;  /* Increased gap between buttons */
+}
+
+button {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    background: #0078D7;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;           /* Added for better text centering */
+    align-items: center;     /* Added for better text centering */
+    justify-content: center; /* Added for better text centering */
+    padding: 0;             /* Remove default padding */
+}
+
+button:hover {
+    background: #005bb5;
+}
+
+.stop {
+    background: red;
+}
+
+.stop:hover {
+    background: darkred;
+}
+
+/* Camera Control Specific Buttons */
+.quick-positions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 15px 0;
+}
+
+.quick-positions button {
+    width: 80px;
+    height: 40px;
+    border-radius: 20px;
+    font-size: 16px;
+    padding: 0 15px;    /* Add horizontal padding */
+}
+
+/* Speed Control Button */
+.speed-control button {
+    width: auto;        /* Allow button to fit content */
+    height: 40px;
+    border-radius: 20px;
+    font-size: 16px;
+    padding: 0 15px;    /* Add horizontal padding */
+    margin: 10px 0;
+}
+
+/* Camera Angle Control Button */
+.camera-angle button {
+    width: auto;        /* Allow button to fit content */
+    height: 40px;
+    border-radius: 20px;
+    font-size: 16px;
+    padding: 0 15px;    /* Add horizontal padding */
+    margin: 10px 0;
+}
+
+/* Speed and Camera Controls Layout */
+.speed-control, .camera-angle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+/* Speed Control */
+input[type="range"] {
+    width: 80%;
+    margin: 10px 0;
+}
+
+/* Value displays */
+#speedValue, #angleValue {
+    font-size: 16px;
+    margin: 5px 0;
+}
+
+/* LED Indicator */
+.led-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin: 10px auto;
+}
+
+.on {
+    background: green;
+}
+
+.off {
+    background: red;
+}
+
+/* Live Data */
+.live-data {
+    background: white;
+    margin: 20px auto;
+    padding: 15px;
+    width: 90%;
+    max-width: 400px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.live-data span {
+    font-weight: bold;
+}
+
+/* Camera Panel */
+.camera-panel {
+    margin: 20px auto;
+    padding: 20px;
+    background: white;
+    width: 90%;
+    max-width: 600px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.camera-container img {
+    width: 100%;
+    border-radius: 10px;
+}
+
+/* Footer */
+footer {
+    margin-top: 20px;
+    background: #333;
+    color: white;
+    padding: 10px;
+}
