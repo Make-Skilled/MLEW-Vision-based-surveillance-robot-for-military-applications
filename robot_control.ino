@@ -1,6 +1,6 @@
-#define BLYNK_TEMPLATE_ID "TMPL3bJWQpdhr"
-#define BLYNK_TEMPLATE_NAME "vision based robot"
-#define BLYNK_AUTH_TOKEN "EsIw1fV5dn07ss6OtwS6KNOu1b4Bch-s"
+#define BLYNK_TEMPLATE_ID "TMPL3ei0ExLSp"
+#define BLYNK_TEMPLATE_NAME "vision robot"
+#define BLYNK_AUTH_TOKEN "tXb_c-bePpPoSqBNZgrhQyrP061tylU6"
 #define BLYNK_PRINT Serial
 
 #include <WiFi.h>
@@ -8,7 +8,14 @@
 #include <BlynkSimpleEsp32.h>
 #include <ESP32Servo.h>
 #include <TinyGPS++.h>
-#include "esp_task_wdt.h"
+#include <esp_task_wdt.h> // For watchdog timer
+#include <ThingSpeak.h>
+
+WiFiClient client;
+
+// ThingSpeak settings
+int channel = 2896841;
+const char* apikey = "VIHKX76IJ2IEXR87";
 
 Servo cameraServo;  // Create servo object
 const int SERVO_PIN = 2;  // Servo control pin
@@ -35,7 +42,7 @@ const int TRIG_PIN = 18;
 const int ECHO_PIN = 19;
 
 TinyGPSPlus gps;
-HardwareSerial gpsSerial(1);
+HardwareSerial gpsSerial(1); // Use Serial1 for GPS
 
 // Variables for GPS data
 float latitude = 0.0;
@@ -51,6 +58,8 @@ unsigned long lastGPSUpdate = 0;
 const long GPS_UPDATE_INTERVAL = 500;  // Update GPS every 500ms
 unsigned long lastUltrasonicUpdate = 0;
 const long ULTRASONIC_UPDATE_INTERVAL = 100;  // Update ultrasonic every 100ms
+unsigned long lastThingSpeakUpdate = 0;
+const long THINGSPEAK_UPDATE_INTERVAL = 20000;  // Update ThingSpeak every 20 seconds
 
 // Static GPS coordinates
 const float DEFAULT_LAT = 16.246477;
@@ -59,6 +68,10 @@ const float DEFAULT_SPEED = 0.0;
 
 unsigned long gpsTimeout = 2000; // 2 second timeout
 unsigned long lastValidGPS = 0;
+
+// WiFi and Blynk reconnection variables
+unsigned long lastWiFiCheck = 0;
+const long WIFI_CHECK_INTERVAL = 5000; // Check WiFi every 5 seconds
 
 // Camera Servo Control (V7)
 BLYNK_WRITE(V7) {
@@ -90,7 +103,6 @@ BLYNK_WRITE(V8) {
 BLYNK_WRITE(V0) {
     int state = param.asInt();
     if (state) {
-        // Check distance before moving forward
         int current_distance = readUltrasonic();
         if (current_distance > SAFE_DISTANCE) {
             digitalWrite(IN1, HIGH);
@@ -98,9 +110,7 @@ BLYNK_WRITE(V0) {
             digitalWrite(IN3, HIGH);
             digitalWrite(IN4, LOW);
         } else {
-            // Stop if obstacle detected
             stopMotors();
-            // Notify through Blynk
             Blynk.virtualWrite(V12, "Obstacle detected!");
         }
     } else {
@@ -178,23 +188,16 @@ void updateStatus() {
 }
 
 int readUltrasonic() {
-    // Clear the trigger pin
     digitalWrite(TRIG_PIN, LOW);
     delayMicroseconds(2);
-    
-    // Send 10μs pulse
     digitalWrite(TRIG_PIN, HIGH);
     delayMicroseconds(10);
     digitalWrite(TRIG_PIN, LOW);
-    
-    // Read the echo pin
     duration = pulseIn(ECHO_PIN, HIGH);
-    
-    // Calculate distance
-    return duration * 0.034 / 2;  // Speed of sound / 2 (round trip)
+    esp_task_wdt_reset(); // Reset watchdog during potentially long operation
+    return duration * 0.034 / 2;
 }
 
-// Function to update GPS data
 void updateGPS() {
     bool validGPSData = false;
     
@@ -206,32 +209,76 @@ void updateGPS() {
                     longitude = gps.location.lng();
                     validGPSData = true;
                     lastValidGPS = millis();
-                    
-                    // Send GPS data to Blynk
-                    Blynk.virtualWrite(V9, String(latitude, 6));
-                    Blynk.virtualWrite(V10, String(longitude, 6));
+                    ThingSpeak.setField(3, String(latitude, 6));
+                    ThingSpeak.setField(4, String(longitude, 6));
                 }
             }
+            esp_task_wdt_reset(); // Reset watchdog during GPS reading
         }
     }
     
-    // Silently use default coordinates if needed
     if (!validGPSData && (millis() - lastValidGPS >= gpsTimeout)) {
         latitude = DEFAULT_LAT;
         longitude = DEFAULT_LONG;
         speed_kmh = DEFAULT_SPEED;
-        
-        Blynk.virtualWrite(V9, String(latitude, 6));
-        Blynk.virtualWrite(V10, String(longitude, 6));
+        ThingSpeak.setField(3, String(latitude, 6));
+        ThingSpeak.setField(4, String(longitude, 6));
+    }
+}
+
+// Function to connect to WiFi with timeout
+bool connectWiFi() {
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, pass);
+    Serial.print("Connecting to WiFi");
+    
+    unsigned long startAttemptTime = millis();
+    const unsigned long timeout = 10000; // 10 seconds timeout
+    
+    while (WiFi.status() != WL_CONNECTED) {
+        if (millis() - startAttemptTime >= timeout) {
+            Serial.println("\nFailed to connect to WiFi within timeout!");
+            return false;
+        }
+        delay(500);
+        Serial.print(".");
+        esp_task_wdt_reset(); // Reset watchdog during delay
+    }
+    Serial.println("\nConnected!");
+    return true;
+}
+
+// Function to check and reconnect WiFi and Blynk
+void checkConnections() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi disconnected! Attempting to reconnect...");
+        connectWiFi();
+    }
+    
+    if (WiFi.status() == WL_CONNECTED && !Blynk.connected()) {
+        Serial.println("Blynk disconnected! Attempting to reconnect...");
+        Blynk.connect();
     }
 }
 
 void setup() {
-    esp_task_wdt_init(10, true); // Initialize with 10 second timeout
-    esp_task_wdt_add(NULL);      // Add current thread to WDT watch
-    
-    Serial.begin(115200);
-    
+    Serial.begin(115200); // Increased baud rate for faster debugging
+
+    // Initialize watchdog timer (10 seconds timeout)
+    esp_task_wdt_init(10, true);
+    esp_task_wdt_add(NULL);
+
+    // Attempt initial WiFi connection
+    if (!connectWiFi()) {
+        Serial.println("Initial WiFi connection failed. Continuing anyway...");
+    }
+
+    // Configure Blynk (non-blocking)
+    Blynk.config(auth);
+    if (WiFi.status() == WL_CONNECTED) {
+        Blynk.connect();
+    }
+
     // Configure motor control pins
     pinMode(IN1, OUTPUT);
     pinMode(IN2, OUTPUT);
@@ -248,21 +295,33 @@ void setup() {
     
     // Initialize servo
     cameraServo.attach(SERVO_PIN);
-    cameraServo.write(currentServoAngle);  // Set to initial position (90 degrees)
+    cameraServo.write(currentServoAngle);
     
-    Blynk.begin(auth, ssid, pass);
-    
-    // Initialize GPS
-    gpsSerial.begin(9600);
+    // Initialize GPS with specific RX/TX pins
+    gpsSerial.begin(9600, SERIAL_8N1, 16, 17); // RX=16, TX=17
     
     // Initialize Ultrasonic pins
     pinMode(TRIG_PIN, OUTPUT);
     pinMode(ECHO_PIN, INPUT);
+
+    // Initialize ThingSpeak
+    ThingSpeak.begin(client);
 }
 
 void loop() {
-    esp_task_wdt_reset();  // Feed the watchdog timer
-    Blynk.run();
+    // Reset watchdog timer
+    esp_task_wdt_reset();
+
+    // Run Blynk if connected
+    if (Blynk.connected()) {
+        Blynk.run();
+    }
+
+    // Check WiFi and Blynk connections periodically
+    if (millis() - lastWiFiCheck > WIFI_CHECK_INTERVAL) {
+        checkConnections();
+        lastWiFiCheck = millis();
+    }
     
     // Update GPS data every 500ms
     if (millis() - lastGPSUpdate > GPS_UPDATE_INTERVAL) {
@@ -273,18 +332,32 @@ void loop() {
     // Update ultrasonic sensor readings every 100ms
     if (millis() - lastUltrasonicUpdate > ULTRASONIC_UPDATE_INTERVAL) {
         distance_cm = readUltrasonic();
-        Blynk.virtualWrite(V12, distance_cm);  // Send distance to Blynk
+        ThingSpeak.setField(1, distance_cm);
         
-        // Auto-stop if obstacle detected while moving forward
         if (distance_cm <= SAFE_DISTANCE && 
             digitalRead(IN1) == HIGH && digitalRead(IN3) == HIGH) {
             stopMotors();
-            Blynk.virtualWrite(V11, "Emergency stop - Obstacle detected!");
+            ThingSpeak.setField(2, 1);
+        } else {
+            ThingSpeak.setField(2, 0);
         }
         
         lastUltrasonicUpdate = millis();
     }
-    delay(10); // Add small delay to prevent tight loops
+
+    // Send data to ThingSpeak every 20 seconds
+    if (millis() - lastThingSpeakUpdate > THINGSPEAK_UPDATE_INTERVAL) {
+        if (WiFi.status() == WL_CONNECTED) {
+            int statusCode = ThingSpeak.writeFields(channel, apikey);
+            if (statusCode == 200) {
+                Serial.println("Data sent to ThingSpeak Channel ID: " + String(channel));
+            } else {
+                Serial.println("Failed to send data to ThingSpeak. Status code: " + String(statusCode));
+            }
+        }
+        lastThingSpeakUpdate = millis();
+    }
+
+    // Small delay to prevent tight loops, but short enough to avoid watchdog issues
+    delay(10);
 }
-
-
