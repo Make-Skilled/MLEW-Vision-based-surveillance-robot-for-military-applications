@@ -8,6 +8,7 @@
 #include <BlynkSimpleEsp32.h>
 #include <ESP32Servo.h>
 #include <TinyGPS++.h>
+#include "esp_task_wdt.h"
 
 Servo cameraServo;  // Create servo object
 const int SERVO_PIN = 2;  // Servo control pin
@@ -226,6 +227,9 @@ void updateGPS() {
 }
 
 void setup() {
+    esp_task_wdt_init(10, true); // Initialize with 10 second timeout
+    esp_task_wdt_add(NULL);      // Add current thread to WDT watch
+    
     Serial.begin(115200);
     
     // Configure motor control pins
@@ -257,6 +261,7 @@ void setup() {
 }
 
 void loop() {
+    esp_task_wdt_reset();  // Feed the watchdog timer
     Blynk.run();
     
     // Update GPS data every 500ms
@@ -279,4 +284,7 @@ void loop() {
         
         lastUltrasonicUpdate = millis();
     }
+    delay(10); // Add small delay to prevent tight loops
 }
+
+
