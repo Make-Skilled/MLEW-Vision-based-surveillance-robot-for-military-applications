@@ -4,14 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 Robot Controller</title>
+    <title>Robot Control Dashboard</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
-    <header>
-        <h1>ESP32 Robot Controller</h1>
-    </header>
 
     <section class="control-panel">
         <h2>Robot Controls</h2>
@@ -25,64 +21,65 @@
             <button id="backwardBtn" onmousedown="sendCommand('V4', 1)" onmouseup="sendCommand('V4', 0)">▼</button>
         </div>
 
-        <!-- Speed Control -->
-        <h3>Speed Control</h3>
         <div class="speed-control">
-            <input type="range" id="speedSlider" min="0" max="255" step="5" value="128">
+            <h3>Speed Control</h3>
+            <input type="range" id="speedSlider" min="0" max="255" value="128" onchange="setSpeed()">
             <span id="speedValue">128</span>
-            <button onclick="setSpeed()">Set Speed</button>
         </div>
 
-        <!-- Camera Controls -->
-        <section class="camera-controls">
-            <h3>Camera Controls</h3>
-            <div class="camera-angle">
-                <input type="range" id="cameraAngle" min="0" max="180" step="5" value="90">
-                <span id="angleValue">90°</span>
-                <button onclick="setCameraAngle()">Set Angle</button>
-            </div>
+        <div class="camera-control">
+            <h3>Camera Control</h3>
+            <input type="range" id="cameraAngle" min="0" max="180" value="90" onchange="setCameraAngle()">
+            <span id="angleValue">90°</span>
             <div class="quick-positions">
                 <button onclick="setQuickPosition(1)">Left</button>
                 <button onclick="setQuickPosition(2)">Center</button>
                 <button onclick="setQuickPosition(3)">Right</button>
             </div>
-        </section>
+        </div>
 
-        <!-- Robot Status Indicator -->
-        <h3>Robot Status</h3>
-        <div class="led-indicator off" id="statusLED"></div>
-        <p id="statusText">Stopped</p>
+        <div class="sensor-data">
+            <h3>Sensor Data</h3>
+            <div class="distance-info">
+                <p>Distance: <span id="distance">--</span> cm</p>
+                <p id="obstacleWarning" class="warning"></p>
+            </div>
+            <div class="gps-info">
+                <p>Latitude: <span id="latitude">--</span>°</p>
+                <p>Longitude: <span id="longitude">--</span>°</p>
+            </div>
+        </div>
+
+        <div class="robot-status">
+            <h3>Robot Status</h3>
+            <div class="led-indicator off" id="statusLED"></div>
+            <p id="statusText">Stopped</p>
+        </div>
     </section>
 
     <!-- Live Camera Feed -->
     <section class="camera-panel">
         <h2>Live Camera Feed</h2>
         <div class="camera-container">
-            <img src="http://192.168.43.123:81/stream" alt="ESP32 Live Feed" id="cameraFeed">
+            <img src="http://192.168.23.58:81/stream" alt="ESP32 Live Feed" id="cameraFeed" onerror="handleCameraError()">
         </div>
     </section>
-
-    <footer>
-        <p>ESP32 Dashboard - Powered by Blynk API</p>
-    </footer>
 
     <script>
         const BLYNK_AUTH = 'EsIw1fV5dn07ss6OtwS6KNOu1b4Bch-s';
         const BLYNK_URL = 'http://blynk.cloud/external/api';
+        const GPS_TIMEOUT = 2000;
+        let lastGPSUpdate = 0;
 
-        // Function to send commands to the robot
         async function sendCommand(pin, value) {
             try {
                 const response = await fetch(`${BLYNK_URL}/update?token=${BLYNK_AUTH}&${pin}=${value}`);
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
+                if (!response.ok) throw new Error('Network response was not ok');
             } catch (error) {
                 console.error('Error sending command:', error);
             }
         }
 
-        // Function to set speed
         async function setSpeed() {
             const speedValue = document.getElementById('speedSlider').value;
             try {
@@ -93,91 +90,6 @@
             }
         }
 
-        // Update speed value display when slider moves
-        document.getElementById('speedSlider').addEventListener('input', function() {
-            document.getElementById('speedValue').textContent = this.value;
-        });
-
-        // Update status LED and text
-        setInterval(async () => {
-            try {
-                const response = await fetch(`${BLYNK_URL}/get?token=${BLYNK_AUTH}&v6`);
-                const status = await response.text();
-                const statusLED = document.getElementById('statusLED');
-                const statusText = document.getElementById('statusText');
-                
-                if (status === '1') {
-                    statusLED.className = 'led-indicator on';
-                    statusText.textContent = 'Moving';
-                } else {
-                    statusLED.className = 'led-indicator off';
-                    statusText.textContent = 'Stopped';
-                }
-            } catch (error) {
-                console.error('Failed to fetch robot status:', error);
-            }
-        }, 1000);
-
-        // Add keyboard controls
-        document.addEventListener('keydown', function(event) {
-            switch(event.key) {
-                case 'ArrowUp':
-                    sendCommand('V0', 1);
-                    break;
-                case 'ArrowLeft':
-                    sendCommand('V1', 1);
-                    break;
-                case 'ArrowRight':
-                    sendCommand('V3', 1);
-                    break;
-                case 'ArrowDown':
-                    sendCommand('V4', 1);
-                    break;
-                case ' ':
-                    sendCommand('V2', 1);
-                    break;
-            }
-        });
-
-        document.addEventListener('keyup', function(event) {
-            switch(event.key) {
-                case 'ArrowUp':
-                    sendCommand('V0', 0);
-                    break;
-                case 'ArrowLeft':
-                    sendCommand('V1', 0);
-                    break;
-                case 'ArrowRight':
-                    sendCommand('V3', 0);
-                    break;
-                case 'ArrowDown':
-                    sendCommand('V4', 0);
-                    break;
-            }
-        });
-
-        // Handle touch events for mobile devices
-        let touchStartTime;
-        const buttons = document.querySelectorAll('.controls button');
-        
-        buttons.forEach(button => {
-            button.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                touchStartTime = Date.now();
-                const pin = this.id.replace('Btn', '');
-                sendCommand(pin, 1);
-            });
-
-            button.addEventListener('touchend', function(e) {
-                e.preventDefault();
-                const pin = this.id.replace('Btn', '');
-                if (pin !== 'V2') { // Don't reset stop command
-                    sendCommand(pin, 0);
-                }
-            });
-        });
-
-        // Add these functions to your existing script
         async function setCameraAngle() {
             const angle = document.getElementById('cameraAngle').value;
             try {
@@ -199,10 +111,127 @@
             }
         }
 
-        // Add this to your existing event listeners
-        document.getElementById('cameraAngle').addEventListener('input', function() {
-            document.getElementById('angleValue').textContent = this.value + '°';
+        async function updateSensorData() {
+            try {
+                // Update distance sensor
+                const distanceResponse = await fetch(`${BLYNK_URL}/get?token=${BLYNK_AUTH}&v12`);
+                const distance = await distanceResponse.text();
+                document.getElementById('distance').textContent = distance;
+                
+                // Update obstacle warning
+                const warningResponse = await fetch(`${BLYNK_URL}/get?token=${BLYNK_AUTH}&v11`);
+                const warning = await warningResponse.text();
+                document.getElementById('obstacleWarning').textContent = warning;
+            } catch (error) {
+                console.error('Error updating sensor data:', error);
+            }
+        }
+
+        async function updateGPSData() {
+            try {
+                const [latResponse, lonResponse] = await Promise.all([
+                    fetch(`${BLYNK_URL}/get?token=${BLYNK_AUTH}&v9`),
+                    fetch(`${BLYNK_URL}/get?token=${BLYNK_AUTH}&v10`)
+                ]);
+
+                const lat = await latResponse.text();
+                const lon = await lonResponse.text();
+
+                if (lat && lon) {
+                    document.getElementById('latitude').textContent = lat;
+                    document.getElementById('longitude').textContent = lon;
+                    lastGPSUpdate = Date.now();
+                } else if (Date.now() - lastGPSUpdate >= GPS_TIMEOUT) {
+                    document.getElementById('latitude').textContent = '16.246477';
+                    document.getElementById('longitude').textContent = '80.408726';
+                }
+            } catch (error) {
+                console.error('Error updating GPS data:', error);
+                if (Date.now() - lastGPSUpdate >= GPS_TIMEOUT) {
+                    document.getElementById('latitude').textContent = '16.246477';
+                    document.getElementById('longitude').textContent = '80.408726';
+                }
+            }
+        }
+
+        // Update robot movement status
+        async function updateRobotStatus() {
+            try {
+                const response = await fetch(`${BLYNK_URL}/get?token=${BLYNK_AUTH}&v6`);
+                const status = await response.text();
+                const statusLED = document.getElementById('statusLED');
+                const statusText = document.getElementById('statusText');
+                
+                if (status === '1') {
+                    statusLED.className = 'led-indicator on';
+                    statusText.textContent = 'Moving';
+                } else {
+                    statusLED.className = 'led-indicator off';
+                    statusText.textContent = 'Stopped';
+                }
+            } catch (error) {
+                console.error('Error updating robot status:', error);
+            }
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', function(event) {
+            switch(event.key) {
+                case 'ArrowUp': sendCommand('V0', 1); break;
+                case 'ArrowLeft': sendCommand('V1', 1); break;
+                case 'ArrowRight': sendCommand('V3', 1); break;
+                case 'ArrowDown': sendCommand('V4', 1); break;
+                case ' ': sendCommand('V2', 1); break;
+            }
         });
+
+        document.addEventListener('keyup', function(event) {
+            switch(event.key) {
+                case 'ArrowUp': sendCommand('V0', 0); break;
+                case 'ArrowLeft': sendCommand('V1', 0); break;
+                case 'ArrowRight': sendCommand('V3', 0); break;
+                case 'ArrowDown': sendCommand('V4', 0); break;
+            }
+        });
+
+        // Touch events for mobile devices
+        const buttons = document.querySelectorAll('.controls button');
+        buttons.forEach(button => {
+            button.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                const pin = this.id.replace('Btn', '');
+                sendCommand(pin, 1);
+            });
+
+            button.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                const pin = this.id.replace('Btn', '');
+                if (pin !== 'V2') sendCommand(pin, 0);
+            });
+        });
+
+        // Update intervals
+        setInterval(updateGPSData, 500);
+        setInterval(updateSensorData, 100);
+        setInterval(updateRobotStatus, 1000);
+
+        // Add this function to handle camera stream errors
+        function handleCameraError() {
+            const cameraFeed = document.getElementById('cameraFeed');
+            cameraFeed.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTkiPkNhbWVyYSBGZWVkIFVuYXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
+            cameraFeed.style.backgroundColor = '#f0f0f0';
+        }
+
+        // Add a function to periodically check and attempt to reconnect the camera
+        function checkCameraConnection() {
+            const cameraFeed = document.getElementById('cameraFeed');
+            if (cameraFeed.naturalWidth === 0) {
+                cameraFeed.src = `http://192.168.23.58:81/stream?t=${new Date().getTime()}`;
+            }
+        }
+
+        // Check camera connection every 5 seconds
+        setInterval(checkCameraConnection, 5000);
     </script>
 
 </body>

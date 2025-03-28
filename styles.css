@@ -5,6 +5,7 @@ body {
     padding: 0;
     text-align: center;
     background-color: #f4f4f4;
+    line-height: 1.6;
 }
 
 /* Header */
@@ -12,21 +13,31 @@ header {
     background-color: #0078D7;
     color: white;
     padding: 20px;
+    margin-bottom: 20px;
+}
+
+header h1 {
+    margin: 0;
     font-size: 24px;
 }
 
-/* Control Panel */
+/* Control Panel Section */
 .control-panel {
+    background: white;
     margin: 20px auto;
     padding: 20px;
-    background: white;
     width: 90%;
-    max-width: 400px;
+    max-width: 600px;
     border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Buttons */
+h2, h3 {
+    color: #333;
+    margin-top: 0;
+}
+
+/* Movement Controls */
 .controls {
     display: flex;
     flex-direction: column;
@@ -38,7 +49,7 @@ header {
 .middle-controls {
     display: flex;
     justify-content: center;
-    gap: 20px;  /* Increased gap between buttons */
+    gap: 20px;
 }
 
 button {
@@ -50,133 +61,187 @@ button {
     border: none;
     border-radius: 50%;
     cursor: pointer;
-    transition: 0.2s;
-    display: flex;           /* Added for better text centering */
-    align-items: center;     /* Added for better text centering */
-    justify-content: center; /* Added for better text centering */
-    padding: 0;             /* Remove default padding */
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 button:hover {
-    background: #005bb5;
+    background: #005a9e;
 }
 
-.stop {
-    background: red;
+button.stop {
+    background: #d9534f;
 }
 
-.stop:hover {
-    background: darkred;
+button.stop:hover {
+    background: #c9302c;
 }
 
-/* Camera Control Specific Buttons */
-.quick-positions {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
+/* Speed and Camera Controls */
+.speed-control, .camera-control {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
     margin: 15px 0;
 }
 
-.quick-positions button {
-    width: 80px;
-    height: 40px;
-    border-radius: 20px;
-    font-size: 16px;
-    padding: 0 15px;    /* Add horizontal padding */
-}
-
-/* Speed Control Button */
-.speed-control button {
-    width: auto;        /* Allow button to fit content */
-    height: 40px;
-    border-radius: 20px;
-    font-size: 16px;
-    padding: 0 15px;    /* Add horizontal padding */
-    margin: 10px 0;
-}
-
-/* Camera Angle Control Button */
-.camera-angle button {
-    width: auto;        /* Allow button to fit content */
-    height: 40px;
-    border-radius: 20px;
-    font-size: 16px;
-    padding: 0 15px;    /* Add horizontal padding */
-    margin: 10px 0;
-}
-
-/* Speed and Camera Controls Layout */
-.speed-control, .camera-angle {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    margin: 15px 0;
-}
-
-/* Speed Control */
 input[type="range"] {
     width: 80%;
     margin: 10px 0;
 }
 
-/* Value displays */
 #speedValue, #angleValue {
-    font-size: 16px;
-    margin: 5px 0;
+    font-size: 18px;
+    font-weight: bold;
+    color: #0078D7;
 }
 
-/* LED Indicator */
+.quick-positions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.quick-positions button {
+    width: auto;
+    height: 40px;
+    border-radius: 20px;
+    padding: 0 20px;
+    font-size: 16px;
+}
+
+/* Sensor Data Section */
+.sensor-data {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+.distance-info, .gps-info {
+    margin: 10px 0;
+}
+
+.warning {
+    color: #d9534f;
+    font-weight: bold;
+}
+
+/* Robot Status */
+.robot-status {
+    margin: 15px 0;
+}
+
 .led-indicator {
     width: 20px;
     height: 20px;
     border-radius: 50%;
     margin: 10px auto;
+    transition: background 0.3s;
 }
 
-.on {
-    background: green;
+.led-indicator.on {
+    background: #5cb85c;
+    box-shadow: 0 0 10px #5cb85c;
 }
 
-.off {
-    background: red;
+.led-indicator.off {
+    background: #d9534f;
+    box-shadow: 0 0 10px #d9534f;
 }
 
-/* Live Data */
-.live-data {
-    background: white;
-    margin: 20px auto;
-    padding: 15px;
-    width: 90%;
-    max-width: 400px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.live-data span {
+#statusText {
     font-weight: bold;
+    color: #333;
 }
 
 /* Camera Panel */
 .camera-panel {
+    background: white;
     margin: 20px auto;
     padding: 20px;
-    background: white;
     width: 90%;
-    max-width: 600px;
+    max-width: 800px;
     border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.camera-container {
+    width: 100%;
+    overflow: hidden;
+    border-radius: 8px;
 }
 
 .camera-container img {
     width: 100%;
-    border-radius: 10px;
+    height: auto;
+    display: block;
 }
 
-/* Footer */
-footer {
+/* Responsive Design */
+@media (max-width: 768px) {
+    .control-panel, .camera-panel {
+        width: 95%;
+        padding: 15px;
+    }
+
+    button {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+
+    .quick-positions button {
+        padding: 0 15px;
+        font-size: 14px;
+    }
+
+    h2 {
+        font-size: 20px;
+    }
+
+    h3 {
+        font-size: 18px;
+    }
+}
+
+/* Value Displays */
+.value-display {
+    font-family: 'Courier New', monospace;
+    background: #e9ecef;
+    padding: 5px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    min-width: 60px;
+}
+
+/* Animations */
+@keyframes buttonPress {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+}
+
+button:active {
+    animation: buttonPress 0.2s ease;
+}
+
+/* Additional Utility Classes */
+.mt-20 {
     margin-top: 20px;
-    background: #333;
-    color: white;
-    padding: 10px;
+}
+
+.mb-20 {
+    margin-bottom: 20px;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.hidden {
+    display: none;
 }
